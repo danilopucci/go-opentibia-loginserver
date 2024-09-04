@@ -13,6 +13,10 @@ func (p *Packet) init(size int) {
 	p.buffer = make([]byte, size)
 }
 
+func (p *Packet) size() int {
+	return len(p.buffer)
+}
+
 // Use pointer receiver to resize the buffer
 func (p *Packet) resize(size int) {
 	p.buffer = p.buffer[:size]
