@@ -53,7 +53,7 @@ func main() {
 func handleClient(conn net.Conn, loginHandler *LoginHandler) {
 	defer conn.Close()
 
-	var packet Packet
+	var packet IncomingPacket
 	packet.init(1024)
 
 	reqLen, err := conn.Read(packet.buffer)

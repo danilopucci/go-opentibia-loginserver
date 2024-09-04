@@ -10,7 +10,7 @@ func (loginHandler *LoginHandler) init(rsa *RSA) {
 	loginHandler.rsa = rsa
 }
 
-func (loginHandler *LoginHandler) handleLogin(packet *Packet) {
+func (loginHandler *LoginHandler) handleLogin(packet *IncomingPacket) {
 	clientOs := packet.getUint16()
 	protocolVersion := packet.getUint16()
 	datSignature := packet.getUint32()

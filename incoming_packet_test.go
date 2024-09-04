@@ -6,7 +6,7 @@ import (
 )
 
 func TestGetUint8(t *testing.T) {
-	var packet Packet
+	var packet IncomingPacket
 	packet.buffer = []byte{0x12, 0x34}
 
 	sizeBefore := packet.size()
@@ -26,7 +26,7 @@ func TestGetUint8(t *testing.T) {
 }
 
 func TestGetUint16(t *testing.T) {
-	var packet Packet
+	var packet IncomingPacket
 	packet.buffer = []byte{0x34, 0x12} // Little endian 0x1234
 
 	sizeBefore := packet.size()
@@ -45,8 +45,8 @@ func TestGetUint16(t *testing.T) {
 	}
 }
 
-func TestPacketGetUint32(t *testing.T) {
-	var packet Packet
+func TestIncomingPacketGetUint32(t *testing.T) {
+	var packet IncomingPacket
 	packet.buffer = []byte{0x78, 0x56, 0x34, 0x12} // Little endian 0x12345678
 
 	sizeBefore := packet.size()
@@ -65,8 +65,8 @@ func TestPacketGetUint32(t *testing.T) {
 	}
 }
 
-func TestPacketGetString(t *testing.T) {
-	var packet Packet
+func TestIncomingPacketGetString(t *testing.T) {
+	var packet IncomingPacket
 	packet.buffer = append([]byte{0x05, 0x00}, []byte("hello")...) // 0x05 for the string length, "hello" as the string
 
 	sizeBefore := packet.size()
@@ -85,8 +85,8 @@ func TestPacketGetString(t *testing.T) {
 	}
 }
 
-func TestPacketGetMaxStringLength(t *testing.T) {
-	var packet Packet
+func TestIncomingPacketGetMaxStringLength(t *testing.T) {
+	var packet IncomingPacket
 	str := "this_is_a_very_long_string"
 	strLen := uint16(len(str))
 	packet.buffer = append([]byte{byte(strLen), 0x00}, []byte(str)...)
@@ -103,8 +103,8 @@ func TestPacketGetMaxStringLength(t *testing.T) {
 	}
 }
 
-func TestPacketBufferOverflow(t *testing.T) {
-	var packet Packet
+func TestIncomingPacketBufferOverflow(t *testing.T) {
+	var packet IncomingPacket
 	packet.buffer = []byte{0x01}
 
 	defer func() {
@@ -116,8 +116,8 @@ func TestPacketBufferOverflow(t *testing.T) {
 	packet.getUint16() // Should panic because there's not enough data
 }
 
-func TestPacketSkipBytes(t *testing.T) {
-	var packet Packet
+func TestIncomingPacketSkipBytes(t *testing.T) {
+	var packet IncomingPacket
 	packet.buffer = []byte{0x01, 0x02, 0x03, 0x04}
 
 	sizeBefore := packet.size()
@@ -135,8 +135,8 @@ func TestPacketSkipBytes(t *testing.T) {
 	}
 }
 
-func TestPacketSkipTooManyBytesShouldFail(t *testing.T) {
-	var packet Packet
+func TestIncomingPacketSkipTooManyBytesShouldFail(t *testing.T) {
+	var packet IncomingPacket
 	packet.buffer = []byte{0x01, 0x02, 0x03}
 
 	defer func() {
@@ -148,8 +148,8 @@ func TestPacketSkipTooManyBytesShouldFail(t *testing.T) {
 	packet.skipBytes(10) // Should panic
 }
 
-func TestPacketEmptyBufferShouldFail(t *testing.T) {
-	var packet Packet
+func TestIncomingPacketEmptyBufferShouldFail(t *testing.T) {
+	var packet IncomingPacket
 	packet.buffer = []byte{}
 
 	defer func() {
@@ -161,8 +161,8 @@ func TestPacketEmptyBufferShouldFail(t *testing.T) {
 	packet.getUint32() // Should panic due to empty buffer
 }
 
-func TestPacketResizeSmaller(t *testing.T) {
-	var packet Packet
+func TestIncomingPacketResizeSmaller(t *testing.T) {
+	var packet IncomingPacket
 	packet.init(10) // Initialize buffer with 10 bytes
 	packet.resize(5)
 
@@ -171,8 +171,8 @@ func TestPacketResizeSmaller(t *testing.T) {
 	}
 }
 
-func TestPacketResizeLargerShouldFail(t *testing.T) {
-	var packet Packet
+func TestIncomingPacketResizeLargerShouldFail(t *testing.T) {
+	var packet IncomingPacket
 	packet.init(5) // Initialize buffer with 5 bytes
 	packet.buffer = []byte{0x01, 0x02, 0x03, 0x04, 0x05}
 
@@ -187,8 +187,8 @@ func TestPacketResizeLargerShouldFail(t *testing.T) {
 	packet.resize(10)
 }
 
-func TestPacketInit(t *testing.T) {
-	var packet Packet
+func TestIncomingPacketInit(t *testing.T) {
+	var packet IncomingPacket
 	packet.init(10)
 
 	if len(packet.buffer) != 10 {
