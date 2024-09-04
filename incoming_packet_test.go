@@ -123,12 +123,13 @@ func TestIncomingPacketSkipBytes(t *testing.T) {
 	sizeBefore := packet.size()
 	packet.skipBytes(2)
 
-	if packet.buffer[0] != 0x03 {
-		t.Errorf("expected buffer[0] to be 0x03 after skipping, got 0x%x", packet.buffer[0])
+	uint8Data := packet.getUint8()
+	if uint8Data != 0x03 {
+		t.Errorf("expected data to be 0x03 after skipping, got 0x%x", uint8Data)
 	}
 
 	sizeAfter := packet.size()
-	expectedSize := sizeBefore - 2
+	expectedSize := sizeBefore - 3 // skipped 2, read 1
 
 	if sizeAfter != expectedSize {
 		t.Errorf("expected packet size to be %d, and got %d", expectedSize, sizeAfter)
