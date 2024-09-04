@@ -6,6 +6,13 @@ import (
 	"os"
 )
 
+type Opcode uint8
+
+const (
+	Login  Opcode = 0x01
+	Status Opcode = 0xFF
+)
+
 func main() {
 
 	rsaObj := &RSA{}
@@ -16,6 +23,9 @@ func main() {
 		fmt.Println("Error loading private key:", err)
 		os.Exit(1)
 	}
+
+	var loginHandler LoginHandler
+	loginHandler.init(rsaObj)
 
 	port := 7171
 	listener, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", port))
@@ -35,12 +45,12 @@ func main() {
 			continue
 		}
 
-		go handleClient(conn, rsaObj)
+		go handleClient(conn, &loginHandler)
 	}
 
 }
 
-func handleClient(conn net.Conn, rsaObj *RSA) {
+func handleClient(conn net.Conn, loginHandler *LoginHandler) {
 	defer conn.Close()
 
 	var packet Packet
@@ -56,35 +66,15 @@ func handleClient(conn net.Conn, rsaObj *RSA) {
 	fmt.Printf("Received %d bytes\n", reqLen)
 
 	messageSize := packet.getUint16()
-	clientOpcode := packet.getUint8()
-	clientOs := packet.getUint16()
-	protocolVersion := packet.getUint16()
-	datSignature := packet.getUint32()
-	sprSignature := packet.getUint32()
-	picSignature := packet.getUint32()
+	clientOpcode := Opcode(packet.getUint8())
 
-	fmt.Printf("messageSize: %d, clientOpcode: %d; clientOs: %d; protocolVersion: %d; datSignature: %X; sprSignature: %X, picSignature: %X\n",
-		messageSize, clientOpcode, clientOs, protocolVersion, datSignature, sprSignature, picSignature)
+	fmt.Printf("messageSize: %d; clientOpcode: %d\n", messageSize, clientOpcode)
 
-	// Decrypt the message
-	decryptedMsg, err := rsaObj.DecryptNoPadding(packet.buffer)
-	if err != nil {
-		fmt.Println("Error decrypting message:", err)
-		return
+	switch clientOpcode {
+	case Login:
+		loginHandler.handleLogin(&packet)
+	case Status:
+		fmt.Println("status packet is not supported yet")
 	}
 
-	packet.buffer = decryptedMsg
-
-	if packet.getUint8() != 0 {
-		fmt.Println("Error decrypted is not zero:")
-	}
-
-	xteaKey0 := packet.getUint32()
-	xteaKey1 := packet.getUint32()
-	xteaKey2 := packet.getUint32()
-	xteaKey3 := packet.getUint32()
-	accountNumber := packet.getUint32()
-	password := packet.getString()
-
-	fmt.Printf("xtea0: %d, xtea1: %d, xtea2 %d, xtea3 %d, Account number: %d, password: %s\n", xteaKey0, xteaKey1, xteaKey2, xteaKey3, accountNumber, password)
 }
