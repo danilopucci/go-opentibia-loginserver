@@ -25,6 +25,26 @@ func TestGetUint8(t *testing.T) {
 	}
 }
 
+func TestPeekUint8(t *testing.T) {
+	var packet IncomingPacket
+	packet.buffer = []byte{0x12, 0x34}
+
+	sizeBefore := packet.size()
+	var want uint8 = 0x12
+	var got uint8 = packet.peekUint8()
+
+	if got != want {
+		t.Errorf("got %d, wanted %d", got, want)
+	}
+
+	sizeAfter := packet.size()
+	expectedSize := sizeBefore
+
+	if sizeAfter != expectedSize {
+		t.Errorf("expected packet size to be %d, and got %d", expectedSize, sizeAfter)
+	}
+}
+
 func TestGetUint16(t *testing.T) {
 	var packet IncomingPacket
 	packet.buffer = []byte{0x34, 0x12} // Little endian 0x1234
@@ -45,6 +65,26 @@ func TestGetUint16(t *testing.T) {
 	}
 }
 
+func TestPeekUint16(t *testing.T) {
+	var packet IncomingPacket
+	packet.buffer = []byte{0x34, 0x12} // Little endian 0x1234
+
+	sizeBefore := packet.size()
+	var want uint16 = 0x1234
+	var got uint16 = packet.peekUint16()
+
+	if got != want {
+		t.Errorf("got %d, wanted %d", got, want)
+	}
+
+	sizeAfter := packet.size()
+	expectedSize := sizeBefore
+
+	if sizeAfter != expectedSize {
+		t.Errorf("expected packet size to be %d, and got %d", expectedSize, sizeAfter)
+	}
+}
+
 func TestIncomingPacketGetUint32(t *testing.T) {
 	var packet IncomingPacket
 	packet.buffer = []byte{0x78, 0x56, 0x34, 0x12} // Little endian 0x12345678
@@ -59,6 +99,26 @@ func TestIncomingPacketGetUint32(t *testing.T) {
 
 	sizeAfter := packet.size()
 	expectedSize := sizeBefore - int(unsafe.Sizeof(uint32(0)))
+
+	if sizeAfter != expectedSize {
+		t.Errorf("expected packet size to be %d, and got %d", expectedSize, sizeAfter)
+	}
+}
+
+func TestIncomingPacketPeekUint32(t *testing.T) {
+	var packet IncomingPacket
+	packet.buffer = []byte{0x78, 0x56, 0x34, 0x12} // Little endian 0x12345678
+
+	sizeBefore := packet.size()
+	var want uint32 = 0x12345678
+	var got uint32 = packet.peekUint32()
+
+	if got != want {
+		t.Errorf("got %d, wanted %d", got, want)
+	}
+
+	sizeAfter := packet.size()
+	expectedSize := sizeBefore
 
 	if sizeAfter != expectedSize {
 		t.Errorf("expected packet size to be %d, and got %d", expectedSize, sizeAfter)
