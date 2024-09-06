@@ -72,7 +72,7 @@ func handleClient(conn net.Conn, loginHandler *LoginHandler) {
 
 	switch clientOpcode {
 	case Login:
-		loginHandler.handleLogin(&packet)
+		loginHandler.handleLogin(&packet, conn)
 	case Status:
 		fmt.Println("status packet is not supported yet")
 	}
