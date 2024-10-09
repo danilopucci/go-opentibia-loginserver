@@ -1,70 +1,73 @@
-package main
+package packet
 
 import (
 	"encoding/binary"
 )
 
-type IncomingPacket struct {
+type Incoming struct {
 	buffer   []byte
 	position int
 }
 
-func (p *IncomingPacket) init(size int) {
-	p.buffer = make([]byte, size)
+func NewIncoming(size int) *Incoming {
+	return &Incoming{
+		buffer:   make([]byte, size),
+		position: 0,
+	}
 }
 
-func (p *IncomingPacket) size() int {
+func (p *Incoming) size() int {
 	return len(p.buffer[p.position:])
 }
 
-func (p *IncomingPacket) resize(size int) {
+func (p *Incoming) Resize(size int) {
 	p.buffer = p.buffer[:size]
 }
 
-func (p *IncomingPacket) skipBytes(n int) {
+func (p *Incoming) skipBytes(n int) {
 	if p.position+n > p.size() {
 		panic("skipping more bytes than size")
 	}
 	p.position += n
 }
 
-func (p *IncomingPacket) getUint8() uint8 {
+func (p *Incoming) GetUint8() uint8 {
 	result := p.buffer[p.position]
 	p.position += 1
 	return result
 }
 
-func (p *IncomingPacket) peekUint8() uint8 {
+func (p *Incoming) peekUint8() uint8 {
 	return p.buffer[p.position]
 }
 
-func (p *IncomingPacket) getUint16() uint16 {
+func (p *Incoming) GetUint16() uint16 {
 	result := binary.LittleEndian.Uint16(p.buffer[p.position:])
 	p.position += 2
 	return result
 }
 
-func (p *IncomingPacket) peekUint16() uint16 {
+func (p *Incoming) peekUint16() uint16 {
 	return binary.LittleEndian.Uint16(p.buffer[p.position:])
 }
 
-func (p *IncomingPacket) getUint32() uint32 {
+func (p *Incoming) GetUint32() uint32 {
 	result := binary.LittleEndian.Uint32(p.buffer[p.position:])
 	p.position += 4
 	return result
 }
 
-func (p *IncomingPacket) peekUint32() uint32 {
+func (p *Incoming) peekUint32() uint32 {
 	return binary.LittleEndian.Uint32(p.buffer[p.position:])
 }
 
-func (p *IncomingPacket) getString() string {
-	stringLength := int(p.getUint16())
+func (p *Incoming) GetString() string {
+	stringLength := int(p.GetUint16())
 	result := string(p.buffer[p.position:(p.position + stringLength)])
 	p.position += stringLength
 	return result
 }
 
-func (p *IncomingPacket) peekBuffer() []byte {
+func (p *Incoming) PeekBuffer() []byte {
 	return p.buffer[p.position:]
 }

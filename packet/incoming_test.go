@@ -1,4 +1,4 @@
-package main
+package packet
 
 import (
 	"testing"
@@ -6,12 +6,12 @@ import (
 )
 
 func TestGetUint8(t *testing.T) {
-	var packet IncomingPacket
+	var packet Incoming
 	packet.buffer = []byte{0x12, 0x34}
 
 	sizeBefore := packet.size()
 	var want uint8 = 0x12
-	var got uint8 = packet.getUint8()
+	var got uint8 = packet.GetUint8()
 
 	if got != want {
 		t.Errorf("got %d, wanted %d", got, want)
@@ -26,7 +26,7 @@ func TestGetUint8(t *testing.T) {
 }
 
 func TestPeekUint8(t *testing.T) {
-	var packet IncomingPacket
+	var packet Incoming
 	packet.buffer = []byte{0x12, 0x34}
 
 	sizeBefore := packet.size()
@@ -46,12 +46,12 @@ func TestPeekUint8(t *testing.T) {
 }
 
 func TestGetUint16(t *testing.T) {
-	var packet IncomingPacket
+	var packet Incoming
 	packet.buffer = []byte{0x34, 0x12} // Little endian 0x1234
 
 	sizeBefore := packet.size()
 	var want uint16 = 0x1234
-	var got uint16 = packet.getUint16()
+	var got uint16 = packet.GetUint16()
 
 	if got != want {
 		t.Errorf("got %d, wanted %d", got, want)
@@ -66,7 +66,7 @@ func TestGetUint16(t *testing.T) {
 }
 
 func TestPeekUint16(t *testing.T) {
-	var packet IncomingPacket
+	var packet Incoming
 	packet.buffer = []byte{0x34, 0x12} // Little endian 0x1234
 
 	sizeBefore := packet.size()
@@ -85,13 +85,13 @@ func TestPeekUint16(t *testing.T) {
 	}
 }
 
-func TestIncomingPacketGetUint32(t *testing.T) {
-	var packet IncomingPacket
+func TestIncomingGetUint32(t *testing.T) {
+	var packet Incoming
 	packet.buffer = []byte{0x78, 0x56, 0x34, 0x12} // Little endian 0x12345678
 
 	sizeBefore := packet.size()
 	var want uint32 = 0x12345678
-	var got uint32 = packet.getUint32()
+	var got uint32 = packet.GetUint32()
 
 	if got != want {
 		t.Errorf("got %d, wanted %d", got, want)
@@ -105,8 +105,8 @@ func TestIncomingPacketGetUint32(t *testing.T) {
 	}
 }
 
-func TestIncomingPacketPeekUint32(t *testing.T) {
-	var packet IncomingPacket
+func TestIncomingPeekUint32(t *testing.T) {
+	var packet Incoming
 	packet.buffer = []byte{0x78, 0x56, 0x34, 0x12} // Little endian 0x12345678
 
 	sizeBefore := packet.size()
@@ -125,13 +125,13 @@ func TestIncomingPacketPeekUint32(t *testing.T) {
 	}
 }
 
-func TestIncomingPacketGetString(t *testing.T) {
-	var packet IncomingPacket
+func TestIncomingGetString(t *testing.T) {
+	var packet Incoming
 	packet.buffer = append([]byte{0x05, 0x00}, []byte("hello")...) // 0x05 for the string length, "hello" as the string
 
 	sizeBefore := packet.size()
 	want := "hello"
-	got := packet.getString()
+	got := packet.GetString()
 
 	if got != want {
 		t.Errorf("got %s, wanted %s", got, want)
@@ -145,14 +145,14 @@ func TestIncomingPacketGetString(t *testing.T) {
 	}
 }
 
-func TestIncomingPacketGetMaxStringLength(t *testing.T) {
-	var packet IncomingPacket
+func TestIncomingGetMaxStringLength(t *testing.T) {
+	var packet Incoming
 	str := "this_is_a_very_long_string"
 	strLen := uint16(len(str))
 	packet.buffer = append([]byte{byte(strLen), 0x00}, []byte(str)...)
 
 	want := str
-	got := packet.getString()
+	got := packet.GetString()
 
 	if got != want {
 		t.Errorf("got %s, wanted %s", got, want)
@@ -163,8 +163,8 @@ func TestIncomingPacketGetMaxStringLength(t *testing.T) {
 	}
 }
 
-func TestIncomingPacketBufferOverflow(t *testing.T) {
-	var packet IncomingPacket
+func TestIncomingBufferOverflow(t *testing.T) {
+	var packet Incoming
 	packet.buffer = []byte{0x01}
 
 	defer func() {
@@ -173,17 +173,17 @@ func TestIncomingPacketBufferOverflow(t *testing.T) {
 		}
 	}()
 
-	packet.getUint16() // Should panic because there's not enough data
+	packet.GetUint16() // Should panic because there's not enough data
 }
 
-func TestIncomingPacketSkipBytes(t *testing.T) {
-	var packet IncomingPacket
+func TestIncomingSkipBytes(t *testing.T) {
+	var packet Incoming
 	packet.buffer = []byte{0x01, 0x02, 0x03, 0x04}
 
 	sizeBefore := packet.size()
 	packet.skipBytes(2)
 
-	uint8Data := packet.getUint8()
+	uint8Data := packet.GetUint8()
 	if uint8Data != 0x03 {
 		t.Errorf("expected data to be 0x03 after skipping, got 0x%x", uint8Data)
 	}
@@ -196,8 +196,8 @@ func TestIncomingPacketSkipBytes(t *testing.T) {
 	}
 }
 
-func TestIncomingPacketSkipTooManyBytesShouldFail(t *testing.T) {
-	var packet IncomingPacket
+func TestIncomingSkipTooManyBytesShouldFail(t *testing.T) {
+	var packet Incoming
 	packet.buffer = []byte{0x01, 0x02, 0x03}
 
 	defer func() {
@@ -209,8 +209,8 @@ func TestIncomingPacketSkipTooManyBytesShouldFail(t *testing.T) {
 	packet.skipBytes(10) // Should panic
 }
 
-func TestIncomingPacketEmptyBufferShouldFail(t *testing.T) {
-	var packet IncomingPacket
+func TestIncomingEmptyBufferShouldFail(t *testing.T) {
+	var packet Incoming
 	packet.buffer = []byte{}
 
 	defer func() {
@@ -219,22 +219,20 @@ func TestIncomingPacketEmptyBufferShouldFail(t *testing.T) {
 		}
 	}()
 
-	packet.getUint32() // Should panic due to empty buffer
+	packet.GetUint32() // Should panic due to empty buffer
 }
 
-func TestIncomingPacketResizeSmaller(t *testing.T) {
-	var packet IncomingPacket
-	packet.init(10) // Initialize buffer with 10 bytes
-	packet.resize(5)
+func TestIncomingResizeSmaller(t *testing.T) {
+	packet := NewIncoming(10)
+	packet.Resize(5)
 
 	if len(packet.buffer) != 5 {
 		t.Errorf("expected buffer size to be 5, but got %d", len(packet.buffer))
 	}
 }
 
-func TestIncomingPacketResizeLargerShouldFail(t *testing.T) {
-	var packet IncomingPacket
-	packet.init(5) // Initialize buffer with 5 bytes
+func TestIncomingResizeLargerShouldFail(t *testing.T) {
+	packet := NewIncoming(5)
 	packet.buffer = []byte{0x01, 0x02, 0x03, 0x04, 0x05}
 
 	// Expect a panic when resizing to a larger value
@@ -245,12 +243,11 @@ func TestIncomingPacketResizeLargerShouldFail(t *testing.T) {
 	}()
 
 	// Attempt to resize to a larger size, which should cause a panic
-	packet.resize(10)
+	packet.Resize(10)
 }
 
-func TestIncomingPacketInit(t *testing.T) {
-	var packet IncomingPacket
-	packet.init(10)
+func TestIncomingInit(t *testing.T) {
+	packet := NewIncoming(10)
 
 	if len(packet.buffer) != 10 {
 		t.Errorf("expected buffer size to be 10, but got %d", len(packet.buffer))

@@ -1,13 +1,12 @@
-package main
+package packet
 
 import (
 	"encoding/binary"
 	"testing"
 )
 
-func TestOutgoingPacketInit(t *testing.T) {
-	var packet OutgoingPacket
-	packet.init(64)
+func TestOutgoingInit(t *testing.T) {
+	packet := NewOutgoing(64)
 
 	if len(packet.buffer) != 64 {
 		t.Errorf("Expected buffer length of 64, got %d", len(packet.buffer))
@@ -23,9 +22,8 @@ func TestOutgoingPacketInit(t *testing.T) {
 }
 
 func TestAddUint8(t *testing.T) {
-	var packet OutgoingPacket
-	packet.init(15)
-	packet.addUint8(0xAB)
+	packet := NewOutgoing(15)
+	packet.AddUint8(0xAB)
 
 	if packet.position != 1 {
 		t.Errorf("Expected position to be 1, got %d", packet.position)
@@ -37,9 +35,8 @@ func TestAddUint8(t *testing.T) {
 }
 
 func TestAddUint16(t *testing.T) {
-	var packet OutgoingPacket
-	packet.init(15)
-	packet.addUint16(0x1234)
+	packet := NewOutgoing(15)
+	packet.AddUint16(0x1234)
 
 	if packet.position != 2 {
 		t.Errorf("Expected position to be 2, got %d", packet.position)
@@ -52,9 +49,8 @@ func TestAddUint16(t *testing.T) {
 }
 
 func TestAddUint32(t *testing.T) {
-	var packet OutgoingPacket
-	packet.init(15)
-	packet.addUint32(0xDEADBEEF)
+	packet := NewOutgoing(15)
+	packet.AddUint32(0xDEADBEEF)
 
 	if packet.position != 4 {
 		t.Errorf("Expected position to be 4, got %d", packet.position)
@@ -67,9 +63,8 @@ func TestAddUint32(t *testing.T) {
 }
 
 func TestAddString(t *testing.T) {
-	var packet OutgoingPacket
-	packet.init(64)
-	packet.addString("test")
+	packet := NewOutgoing(64)
+	packet.AddString("test")
 
 	expectedLen := uint16(4) // Length of "test"
 	actualLen := binary.LittleEndian.Uint16(packet.buffer[HEADER_OFFSET:])
@@ -88,9 +83,8 @@ func TestAddString(t *testing.T) {
 }
 
 func TestAddPadding(t *testing.T) {
-	var packet OutgoingPacket
-	packet.init(64)
-	packet.addUint8(0xAB)
+	packet := NewOutgoing(64)
+	packet.AddUint8(0xAB)
 	packet.addPadding()
 
 	expectedSize := 8 // Should round up to the nearest multiple of 8
@@ -106,10 +100,9 @@ func TestAddPadding(t *testing.T) {
 }
 
 func TestHeaderAddSize(t *testing.T) {
-	var packet OutgoingPacket
-	packet.init(64)
-	packet.addUint8(0xAB)
-	packet.headerAddSize()
+	packet := NewOutgoing(64)
+	packet.AddUint8(0xAB)
+	packet.HeaderAddSize()
 
 	sizeInHeader := binary.LittleEndian.Uint16(packet.buffer[packet.header:])
 	if sizeInHeader != 1 {
@@ -121,14 +114,13 @@ func TestHeaderAddSize(t *testing.T) {
 	}
 }
 
-func TestOutgoingPacketXteaEncrypt(t *testing.T) {
-	var packet OutgoingPacket
-	packet.init(64)
-	packet.addUint32(0xDEADBEEF)
+func TestOutgoingXteaEncrypt(t *testing.T) {
+	packet := NewOutgoing(64)
+	packet.AddUint32(0xDEADBEEF)
 
 	// Dummy key for XTEA encryption
 	xteaKey := [4]uint32{0x1, 0x2, 0x3, 0x4}
-	err := packet.xteaEncrypt(xteaKey)
+	err := packet.XteaEncrypt(xteaKey)
 	if err != nil {
 		t.Errorf("Expected no error, but got %v", err)
 	}
