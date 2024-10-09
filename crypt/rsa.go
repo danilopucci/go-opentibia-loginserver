@@ -1,4 +1,4 @@
-package main
+package crypt
 
 import (
 	"crypto/rsa"
@@ -9,8 +9,21 @@ import (
 	"os"
 )
 
+type Decrypter interface {
+	DecryptNoPadding(ciphertext []byte) ([]byte, error)
+}
+
 type RSA struct {
 	privateKey *rsa.PrivateKey
+}
+
+func NewRSADecrypter(pemFile string) (*RSA, error) {
+	r := &RSA{}
+	err := r.LoadPEM(pemFile)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load RSA private key from %s: %w", pemFile, err)
+	}
+	return r, nil
 }
 
 func (r *RSA) LoadPEM(filename string) error {
@@ -48,7 +61,7 @@ func (r *RSA) DecryptNoPadding(ciphertext []byte) ([]byte, error) {
 	plaintext := m.Bytes()
 
 	// Since m.Bytes() might return fewer than 128 bytes if the plaintext has leading zeros,
-	// we need to pad it manually if needed to get the exact size.
+	// pad it manually if needed to get the exact size.
 	if len(plaintext) < 128 {
 		padding := make([]byte, 128-len(plaintext))
 		plaintext = append(padding, plaintext...)
