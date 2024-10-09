@@ -1,4 +1,4 @@
-package main
+package crypt
 
 import (
 	"reflect"
@@ -18,7 +18,7 @@ func TestExpandXteaKey(t *testing.T) {
 		0x2cbf0f2b, 0xcaf688e4, 0xcaf688e4, 0x692e029d, 0x692e029d, 0x07657c56, 0x07657c56, 0xa59cf60f}
 
 	key := [4]uint32{0xdeadbeef, 0xdeadbeef, 0xdeadbeef, 0xdeadbeef}
-	got := expandXteaKey(key)
+	got := ExpandXteaKey(key)
 
 	if got != want {
 		t.Errorf("got %x, wanted %x", got, want)
@@ -41,7 +41,7 @@ func TestXteaEncrypt(t *testing.T) {
 		0xb3e12847, 0x5218a200, 0x5218a200, 0xf0501bb9, 0xf0501bb9, 0x8e879572, 0x8e879572, 0x2cbf0f2b,
 		0x2cbf0f2b, 0xcaf688e4, 0xcaf688e4, 0x692e029d, 0x692e029d, 0x07657c56, 0x07657c56, 0xa59cf60f}
 
-	xteaEncrypt(dataToBeEncrypted, encryptionKey)
+	XteaEncrypt(dataToBeEncrypted, encryptionKey)
 
 	if !reflect.DeepEqual(dataToBeEncrypted, want) {
 		t.Errorf("got %x, wanted %x", dataToBeEncrypted, want)

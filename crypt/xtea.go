@@ -1,8 +1,8 @@
-package main
+package crypt
 
 import "encoding/binary"
 
-func expandXteaKey(k [4]uint32) [64]uint32 {
+func ExpandXteaKey(k [4]uint32) [64]uint32 {
 	const delta = 0x9E3779B9
 	var expanded [64]uint32
 
@@ -19,7 +19,7 @@ func expandXteaKey(k [4]uint32) [64]uint32 {
 	return expanded
 }
 
-func xteaEncrypt(data []byte, k [64]uint32) {
+func XteaEncrypt(data []byte, k [64]uint32) {
 	for i := 0; i < len(k); i += 2 {
 		for offset := 0; offset < len(data); offset += 8 {
 
