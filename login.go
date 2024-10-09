@@ -2,79 +2,56 @@ package main
 
 import (
 	"fmt"
-	"net"
+	"go-opentibia-loginserver/crypt"
+	"go-opentibia-loginserver/packet"
 )
 
-type LoginHandler struct {
-	rsa *RSA
+type LoginParser struct {
+	decrypter crypt.Decrypter
 }
 
-func (loginHandler *LoginHandler) init(rsa *RSA) {
-	loginHandler.rsa = rsa
+type LoginRequest struct {
+	clientOs        uint16
+	protocolVersion uint16
+	datSignature    uint32
+	sprSignature    uint32
+	picSignature    uint32
+	xteaKey         [4]uint32
+	accountNumber   uint32
+	password        string
 }
 
-func (loginHandler *LoginHandler) handleLogin(packet *IncomingPacket, conn net.Conn) {
-	clientOs := packet.getUint16()
-	protocolVersion := packet.getUint16()
-	datSignature := packet.getUint32()
-	sprSignature := packet.getUint32()
-	picSignature := packet.getUint32()
+func NewLoginParser(decrypter crypt.Decrypter) *LoginParser {
+	return &LoginParser{decrypter: decrypter}
+}
 
-	fmt.Printf("clientOs: %d; protocolVersion: %d; datSignature: %X; sprSignature: %X, picSignature: %X\n",
-		clientOs, protocolVersion, datSignature, sprSignature, picSignature)
+func (loginParser *LoginParser) ParseLogin(packet *packet.Incoming) (LoginRequest, error) {
+	var request LoginRequest
 
-	// Decrypt the message
-	decryptedMsg, err := loginHandler.rsa.DecryptNoPadding(packet.peekBuffer())
+	request.clientOs = packet.GetUint16()
+	request.protocolVersion = packet.GetUint16()
+	request.datSignature = packet.GetUint32()
+	request.sprSignature = packet.GetUint32()
+	request.picSignature = packet.GetUint32()
+
+	decryptedMsg, err := loginParser.decrypter.DecryptNoPadding(packet.PeekBuffer())
 	if err != nil {
-		fmt.Println("Error decrypting message:", err)
-		return
+		return request, fmt.Errorf("[parseLogin] - error while decrypting packet: %w", err)
 	}
 
-	copy(packet.buffer[packet.position:], decryptedMsg)
+	copy(packet.PeekBuffer(), decryptedMsg)
 
-	if packet.getUint8() != 0 {
-		fmt.Println("Error decrypted is not zero:")
+	if packet.GetUint8() != 0 {
+		return request, fmt.Errorf("[parseLogin] - error decrypted packet's first byte is not zero")
 	}
 
-	var xteaKey [4]uint32
-	xteaKey[0] = packet.getUint32()
-	xteaKey[1] = packet.getUint32()
-	xteaKey[2] = packet.getUint32()
-	xteaKey[3] = packet.getUint32()
+	request.xteaKey[0] = packet.GetUint32()
+	request.xteaKey[1] = packet.GetUint32()
+	request.xteaKey[2] = packet.GetUint32()
+	request.xteaKey[3] = packet.GetUint32()
 
-	accountNumber := packet.getUint32()
-	password := packet.getString()
+	request.accountNumber = packet.GetUint32()
+	request.password = packet.GetString()
 
-	fmt.Printf("xtea0: %d, xtea1: %d, xtea2 %d, xtea3 %d, Account number: %d, password: %s\n", xteaKey[0], xteaKey[1], xteaKey[2], xteaKey[3], accountNumber, password)
-
-	loginHandler.sendError(conn, xteaKey, "Teste Alala O")
-}
-
-func (loginHandler *LoginHandler) sendError(conn net.Conn, xteaKey [4]uint32, errorData string) {
-	var packet OutgoingPacket
-	packet.init(1024)
-	packet.addUint8(0x0A)
-	packet.addString(errorData)
-
-	loginHandler.send(conn, xteaKey, &packet)
-}
-
-func (loginHandler *LoginHandler) send(conn net.Conn, xteaKey [4]uint32, packet *OutgoingPacket) error {
-
-	//fmt.Printf("raw data before encrypt: header: %d, position: %d, data: %x\n", packet.header, packet.position, packet.buffer)
-	packet.xteaEncrypt(xteaKey)
-	//fmt.Printf("raw data after encrypt: header: %d, position: %d, data: %x\n", packet.header, packet.position, packet.buffer)
-	packet.headerAddSize()
-	//fmt.Printf("raw data after header size: header: %d, position: %d, data: %x\n", packet.header, packet.position, packet.buffer)
-
-	dataToSend := packet.get()
-	fmt.Printf("data output: %d\n", dataToSend)
-
-	n, err := conn.Write(dataToSend)
-	if err != nil {
-		return fmt.Errorf("failed to send data: %v", err)
-	}
-
-	fmt.Printf("Sent %d bytes\n", n)
-	return nil
+	return request, nil
 }
