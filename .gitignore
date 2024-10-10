@@ -1,4 +1,51 @@
+# Binaries for programs and plugins
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Go workspace files
+*.mod
+*.sum
+
+# Output of build process
+/build/
+bin/
+vendor/
+*.out
+
+# Logs and test results
+*.log
+*.test
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Go specific cache files
+go.sum
+/go/
+/tmp/
+/*.tmp
+
+# Dependency directories (in case you use vendoring)
+vendor/
+
+# Go module cache
+/go/pkg/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Environment variable files
+.env
+
+# Debug and profiling related
+profile.out
+coverage.out
+
 
 config.yaml
-
-.env
