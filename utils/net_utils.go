@@ -12,7 +12,7 @@ func GetRemoteIpAddr(conn net.Conn) (uint32, error) {
 		return 0, fmt.Errorf("could not get remote IP address: %s", err)
 	}
 
-	ip, err := ipToUint32(ipStr)
+	ip, err := IpToUint32(ipStr)
 	if err != nil {
 		return 0, fmt.Errorf("could not convert remote IP address (%s): %s", ipStr, err)
 	}
@@ -20,7 +20,11 @@ func GetRemoteIpAddr(conn net.Conn) (uint32, error) {
 	return ip, nil
 }
 
-func ipToUint32(ipStr string) (uint32, error) {
+func IpToUint32(ipStr string) (uint32, error) {
+	if ipStr == "localhost" {
+		ipStr = "127.0.0.1"
+	}
+
 	ip := net.ParseIP(ipStr)
 	if ip == nil {
 		return 0, fmt.Errorf("invalid IP address: %s", ipStr)
