@@ -17,7 +17,7 @@ const (
 	Status Opcode = 0xFF
 )
 
-const MAX_INPUT_PACKET_SIZE = 1024
+const PACKET_SIZE = 1024
 
 func main() {
 
@@ -51,36 +51,33 @@ func main() {
 
 	loginParser := NewLoginParser(rsaDecrypter)
 
-	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", config.LoginServer.HostName, config.LoginServer.Port))
+	tcpListener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", config.LoginServer.HostName, config.LoginServer.Port))
 	if err != nil {
 		fmt.Println("Error:", err)
 		return
 	}
-
-	defer listener.Close()
-
-	fmt.Printf("Server is listening on port %d\n", config.LoginServer.Port)
+	defer tcpListener.Close()
 
 	for {
-		conn, err := listener.Accept()
+		tcpConnection, err := tcpListener.Accept()
 		if err != nil {
 			fmt.Println("Error:", err)
 			continue
 		}
 
-		go handleClient(conn, loginParser, database, &config)
+		go handleLoginRequest(tcpConnection, loginParser, database, &config)
 	}
 
 }
 
-func handleClient(conn net.Conn, loginParser *LoginParser, database *sql.DB, config *Config) {
+func handleLoginRequest(conn net.Conn, loginParser *LoginParser, database *sql.DB, config *Config) {
 	defer conn.Close()
 
-	packet := packet.NewIncoming(MAX_INPUT_PACKET_SIZE)
+	packet := packet.NewIncoming(PACKET_SIZE)
 
 	reqLen, err := conn.Read(packet.PeekBuffer())
 	if err != nil {
-		fmt.Println("[handleClient] - error reading:", err.Error())
+		fmt.Printf("[handleClient] - error reading: %s\n", err.Error())
 		return
 	}
 	packet.Resize(reqLen)
@@ -91,62 +88,64 @@ func handleClient(conn net.Conn, loginParser *LoginParser, database *sql.DB, con
 		return
 	}
 
-	messageSize := packet.GetUint16()
+	packet.GetUint16()
 	clientOpcode := Opcode(packet.GetUint8())
 
-	fmt.Printf("[handleClient] - debug - new message (%d bytes); clientOpcode: %d\n", messageSize, clientOpcode)
-
-	switch clientOpcode {
-	case Login:
-		loginInfo, err := loginParser.ParseLogin(packet)
-		if err != nil {
-			fmt.Println("[handleClient] - error parsing login info:", err)
-		}
-
-		banInfo, err := getIpBanInfo(database, ip)
-		if err != nil {
-			fmt.Println("[handleClient] - could not fetch ban info:", err)
-		}
-		if banInfo.isBanned {
-			banExpiresDateTime := utils.FormatDateTimeUTC(banInfo.expiresAt)
-			sendClientError(conn, loginInfo.xteaKey, fmt.Sprintf("Your IP has been banned until %s.\n\nReason specified:\n%s", banExpiresDateTime, banInfo.reason))
-			return
-		}
-
-		if loginInfo.accountNumber == 0 {
-			sendClientError(conn, loginInfo.xteaKey, "Invalid account number.")
-			return
-		}
-
-		if loginInfo.password == "" {
-			sendClientError(conn, loginInfo.xteaKey, "Invalid password.")
-			return
-		}
-
-		accountInfo, err := getAccountInfo(database, loginInfo.accountNumber)
-		if err != nil {
-			fmt.Println("[handleClient] - could not fetch account info:", err)
-		}
-
-		if utils.Sha1Hash(loginInfo.password) != accountInfo.passwordSHA1 {
-			sendClientError(conn, loginInfo.xteaKey, "Account number of password is not correct.")
-			return
-		}
-
-		accountInfo.characters, err = getCharactersList(database, accountInfo.id)
-		if err != nil {
-			fmt.Println("[handleClient] - could not fetch character list:", err)
-		}
-
-		sendClientMotdAndCharacterList(conn, loginInfo.xteaKey, "Welcome to Test", &accountInfo, config)
-	case Status:
-		fmt.Println("status packet is not supported yet")
+	if clientOpcode != Login {
+		fmt.Printf("received invalid ClientOpCode (%d) from IP %d\n", clientOpcode, ip)
+		return
 	}
 
+	loginInfo, err := loginParser.ParseLogin(packet)
+	if err != nil {
+		fmt.Printf("[handleClient] - error parsing login info: %s\n", err)
+		return
+	}
+
+	banInfo, err := getIpBanInfo(database, ip)
+	if err != nil {
+		fmt.Printf("[handleClient] - could not fetch ban info: %s\n", err)
+		return
+	}
+
+	if banInfo.isBanned {
+		banExpiresDateTime := utils.FormatDateTimeUTC(banInfo.expiresAt)
+		sendClientError(conn, loginInfo.xteaKey, fmt.Sprintf("Your IP has been banned until %s.\n\nReason specified:\n%s", banExpiresDateTime, banInfo.reason))
+		return
+	}
+
+	if loginInfo.accountNumber == 0 {
+		sendClientError(conn, loginInfo.xteaKey, "Invalid account number.")
+		return
+	}
+
+	if loginInfo.password == "" {
+		sendClientError(conn, loginInfo.xteaKey, "Invalid password.")
+		return
+	}
+
+	accountInfo, err := getAccountInfo(database, loginInfo.accountNumber)
+	if err != nil {
+		fmt.Printf("[handleClient] - could not fetch account info: %s\n", err)
+		return
+	}
+
+	if utils.Sha1Hash(loginInfo.password) != accountInfo.passwordSHA1 {
+		sendClientError(conn, loginInfo.xteaKey, "Account number of password is not correct.")
+		return
+	}
+
+	accountInfo.characters, err = getCharactersList(database, accountInfo.id)
+	if err != nil {
+		fmt.Printf("[handleClient] - could not fetch character list: %s\n", err)
+		return
+	}
+
+	sendClientMotdAndCharacterList(conn, loginInfo.xteaKey, config.Motd, &accountInfo, config)
 }
 
 func sendClientError(conn net.Conn, xteaKey [4]uint32, errorData string) {
-	packet := packet.NewOutgoing(1024)
+	packet := packet.NewOutgoing(PACKET_SIZE)
 	packet.AddUint8(0x0A)
 	packet.AddString(errorData)
 
@@ -154,7 +153,7 @@ func sendClientError(conn net.Conn, xteaKey [4]uint32, errorData string) {
 }
 
 func sendClientMotdAndCharacterList(conn net.Conn, xteaKey [4]uint32, motd string, accountInfo *AccountInfo, config *Config) {
-	packet := packet.NewOutgoing(1024)
+	packet := packet.NewOutgoing(PACKET_SIZE)
 
 	// motd
 	if motd != "" {

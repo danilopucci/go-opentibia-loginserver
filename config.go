@@ -32,6 +32,7 @@ type Config struct {
 	LoginServer LoginServer    `yaml:"loginserver"`
 	Database    DatabaseConfig `yaml:"database"`
 	RSAKeyFile  string         `yaml:"rsakeyfile"`
+	Motd        string         `yaml:"motd"`
 }
 
 type DatabaseConfig struct {
