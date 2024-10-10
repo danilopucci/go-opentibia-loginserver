@@ -21,21 +21,37 @@ const MAX_INPUT_PACKET_SIZE = 1024
 
 func main() {
 
-	rsaDecrypter, err := crypt.NewRSADecrypter("key.pem")
+	config, err := LoadConfig()
+	if err != nil {
+		fmt.Printf("Error loading config: %v", err)
+	}
+
+	for i := range config.GameServer.Worlds {
+		ipAddress, err := utils.IpToUint32(config.GameServer.Worlds[i].HostName)
+		if err == nil {
+			config.GameServer.Worlds[i].HostIP = ipAddress
+		} else {
+			fmt.Println("could not convert world %s host %s to number ip address: %s", config.GameServer.Worlds[i].Name, config.GameServer.Worlds[i].HostName, err)
+		}
+	}
+
+	fmt.Println("%s", config.Database.HostName)
+	fmt.Println("DATABASE_HOST:", os.Getenv("DATABASE_HOST"))
+
+	rsaDecrypter, err := crypt.NewRSADecrypter(config.RSAKeyFile)
 	if err != nil {
 		fmt.Println("Error loading private key:", err)
 		os.Exit(1)
 	}
 
-	database, err := CreateDatabaseConnection("database_user", "database_password", "127.0.0.1", 3306, "database_name")
+	database, err := CreateDatabaseConnection(config.Database.User, config.Database.Password, config.Database.HostName, config.Database.Port, config.Database.Name)
 	if err != nil {
 		fmt.Printf("error while creating database connection: %s\n", err)
 	}
 
 	loginParser := NewLoginParser(rsaDecrypter)
 
-	port := 7171
-	listener, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", port))
+	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", config.LoginServer.HostName, config.LoginServer.Port))
 	if err != nil {
 		fmt.Println("Error:", err)
 		return
@@ -43,7 +59,7 @@ func main() {
 
 	defer listener.Close()
 
-	fmt.Printf("Server is listening on port %d\n", port)
+	fmt.Printf("Server is listening on port %d\n", config.LoginServer.Port)
 
 	for {
 		conn, err := listener.Accept()
@@ -52,12 +68,12 @@ func main() {
 			continue
 		}
 
-		go handleClient(conn, loginParser, database)
+		go handleClient(conn, loginParser, database, &config)
 	}
 
 }
 
-func handleClient(conn net.Conn, loginParser *LoginParser, database *sql.DB) {
+func handleClient(conn net.Conn, loginParser *LoginParser, database *sql.DB, config *Config) {
 	defer conn.Close()
 
 	packet := packet.NewIncoming(MAX_INPUT_PACKET_SIZE)
@@ -122,7 +138,7 @@ func handleClient(conn net.Conn, loginParser *LoginParser, database *sql.DB) {
 			fmt.Println("[handleClient] - could not fetch character list:", err)
 		}
 
-		sendClientMotdAndCharacterList(conn, loginInfo.xteaKey, "Welcome to Test", &accountInfo)
+		sendClientMotdAndCharacterList(conn, loginInfo.xteaKey, "Welcome to Test", &accountInfo, config)
 	case Status:
 		fmt.Println("status packet is not supported yet")
 	}
@@ -137,7 +153,7 @@ func sendClientError(conn net.Conn, xteaKey [4]uint32, errorData string) {
 	sendData(conn, xteaKey, packet)
 }
 
-func sendClientMotdAndCharacterList(conn net.Conn, xteaKey [4]uint32, motd string, accountInfo *AccountInfo) {
+func sendClientMotdAndCharacterList(conn net.Conn, xteaKey [4]uint32, motd string, accountInfo *AccountInfo, config *Config) {
 	packet := packet.NewOutgoing(1024)
 
 	// motd
@@ -151,11 +167,14 @@ func sendClientMotdAndCharacterList(conn net.Conn, xteaKey [4]uint32, motd strin
 	characterListLength := len(accountInfo.characters)
 	packet.AddUint8(uint8(characterListLength))
 
+	//there is no support for multiworld yet, so get the default world
+	world := GetDefaultWorld(config)
+
 	for i := 0; i < characterListLength; i++ {
 		packet.AddString(accountInfo.characters[i])
-		packet.AddString("Test")
-		packet.AddUint32(2130706433)
-		packet.AddUint16(7171)
+		packet.AddString(world.Name)
+		packet.AddUint32(world.HostIP)
+		packet.AddUint16(world.Port)
 	}
 	packet.AddUint16(20)
 

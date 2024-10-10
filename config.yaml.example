@@ -1,0 +1,24 @@
+gameserver:
+  worlds:
+    - name: YourWorldName0
+      id: 0
+      hostname: localhost
+      port: 7172
+    - name: YourWorldName1
+      id: 1
+      hostname: localhost
+      port: 7173
+
+loginserver:
+  hostname: localhost
+  port: 7171
+
+database:
+  name: ${DATABASE_NAME}
+  user: ${DATABASE_USER}
+  password: ${DATABASE_PASSWORD}
+  hostname: ${DATABASE_HOSTNAME}
+  port: ${DATABASE_PORT}
+
+rsakeyfile: key.pem
+
