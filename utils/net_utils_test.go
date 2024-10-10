@@ -77,7 +77,7 @@ func TestIpToUint32(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		ip, err := ipToUint32(test.ipStr)
+		ip, err := IpToUint32(test.ipStr)
 		if test.expectErr {
 			if err == nil {
 				t.Errorf("expected an error for IP: %s, but got none", test.ipStr)
