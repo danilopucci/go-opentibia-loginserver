@@ -5,6 +5,7 @@ import (
 	"go-opentibia-loginserver/config"
 	"go-opentibia-loginserver/models"
 	"go-opentibia-loginserver/packet"
+	"go-opentibia-loginserver/utils"
 	"net"
 )
 
@@ -41,7 +42,13 @@ func SendClientMotdAndCharacterList(conn net.Conn, xteaKey [4]uint32, motd strin
 		packet.AddUint32(world.HostIP)
 		packet.AddUint16(world.Port)
 	}
-	packet.AddUint16(20)
+
+	premiumDays := utils.CalculateRemainingDays(accountInfo.PremiumEndsAt)
+	if premiumDays < 0 {
+		packet.AddUint16(0)
+	} else {
+		packet.AddUint16(uint16(premiumDays))
+	}
 
 	SendData(conn, xteaKey, packet)
 }
