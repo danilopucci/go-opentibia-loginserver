@@ -29,11 +29,12 @@ type GameServer struct {
 
 // Config represents the structure of the configuration
 type Config struct {
-	GameServer  GameServer     `yaml:"gameserver"`
-	LoginServer LoginServer    `yaml:"loginserver"`
-	Database    DatabaseConfig `yaml:"database"`
-	RSAKeyFile  string         `yaml:"rsakeyfile"`
-	Motd        string         `yaml:"motd"`
+	GameServer   GameServer     `yaml:"gameserver"`
+	LoginServer  LoginServer    `yaml:"loginserver"`
+	Database     DatabaseConfig `yaml:"database"`
+	RSAKeyFile   string         `yaml:"rsakeyfile"`
+	Motd         string         `yaml:"motd"`
+	QueryVersion string         `yaml:"queryversion"`
 }
 
 type DatabaseConfig struct {

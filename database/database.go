@@ -10,6 +10,17 @@ import (
 
 const DatabaseDriverName = "mysql"
 
+type DatabaseQuery interface {
+	GetIpBanInfo(database *sql.DB, ip uint32) (models.BanInfo, error)
+	GetAccountInfo(database *sql.DB, accountNumber uint32) (models.AccountInfo, error)
+	GetCharactersList(database *sql.DB, accountId uint32) ([]string, error)
+}
+
+// placeholders only
+type Otx2Query struct{}
+type NostalriusQuery struct{}
+type DefaultQuery struct{}
+
 func CreateDatabaseConnection(user string, password string, host string, port int, databaseName string) (*sql.DB, error) {
 	dsn := generateConnectionString(user, password, host, port, databaseName)
 
@@ -45,57 +56,18 @@ func generateConnectionString(user string, password string, host string, port in
 	)
 }
 
-func GetIpBanInfo(database *sql.DB, ip uint32) (models.BanInfo, error) {
-	var banInfo models.BanInfo
-	statement := fmt.Sprintf("SELECT `reason`, `expires_at`, `banned_by` FROM `ip_bans` WHERE `ip` = %d", ip)
+func GetDatabaseQuery(version string) DatabaseQuery {
+	switch version {
+	case "tvp":
+		return &TvpQuery{}
+		// case "otx2":
+		// 	return &Otx2Query{}
+		// case "nostalrius":
+		// 	return &NostalriusQuery{}
 
-	err := database.QueryRow(statement).Scan(&banInfo.Reason, &banInfo.ExpiresAt, &banInfo.Author)
-	if err != nil {
-		banInfo.IsBanned = false
-		if err != sql.ErrNoRows {
-			return banInfo, err
-		}
-		return banInfo, nil
+		// default:
+		// 	return &DefaultQuery{}
 	}
 
-	banInfo.IsBanned = true
-	return banInfo, nil
-}
-
-func GetAccountInfo(database *sql.DB, accountNumber uint32) (models.AccountInfo, error) {
-	var accountInfo models.AccountInfo
-	statement := fmt.Sprintf("SELECT `id`, `password`, `type`, `premium_ends_at` FROM `accounts` WHERE `id` = %d", accountNumber)
-
-	err := database.QueryRow(statement).Scan(&accountInfo.Id, &accountInfo.PasswordSHA1, &accountInfo.AccountType, &accountInfo.PremiumEndsAt)
-	if err != nil && err != sql.ErrNoRows {
-		return accountInfo, err
-	}
-
-	return accountInfo, nil
-}
-
-func GetCharactersList(database *sql.DB, accountId uint32) ([]string, error) {
-	var characterList []string
-
-	statement := fmt.Sprintf("SELECT `name` FROM `players` WHERE `account_id` = %d AND `deletion` = 0 ORDER BY `name` ASC", accountId)
-
-	rows, err := database.Query(statement)
-	if err != nil {
-		return nil, err
-	}
-
-	defer rows.Close()
-
-	for rows.Next() {
-		var characterName string
-
-		err := rows.Scan(&characterName)
-		if err != nil {
-			return nil, err
-		}
-
-		characterList = append(characterList, characterName)
-	}
-
-	return characterList, nil
+	return nil
 }

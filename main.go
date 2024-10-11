@@ -90,7 +90,9 @@ func handleLoginRequest(conn net.Conn, loginParser *protocol.LoginParser, db *sq
 		return
 	}
 
-	banInfo, err := database.GetIpBanInfo(db, remoteIpAddress)
+	databaseQuery := database.GetDatabaseQuery(cfg.QueryVersion)
+
+	banInfo, err := databaseQuery.GetIpBanInfo(db, remoteIpAddress)
 	if err != nil {
 		fmt.Printf("[handleClient] - could not fetch ban info: %s\n", err)
 		return
@@ -112,7 +114,7 @@ func handleLoginRequest(conn net.Conn, loginParser *protocol.LoginParser, db *sq
 		return
 	}
 
-	accountInfo, err := database.GetAccountInfo(db, loginInfo.AccountNumber)
+	accountInfo, err := databaseQuery.GetAccountInfo(db, loginInfo.AccountNumber)
 	if err != nil {
 		fmt.Printf("[handleClient] - could not fetch account info: %s\n", err)
 		return
@@ -123,7 +125,7 @@ func handleLoginRequest(conn net.Conn, loginParser *protocol.LoginParser, db *sq
 		return
 	}
 
-	accountInfo.Characters, err = database.GetCharactersList(db, accountInfo.Id)
+	accountInfo.Characters, err = databaseQuery.GetCharactersList(db, accountInfo.Id)
 	if err != nil {
 		fmt.Printf("[handleClient] - could not fetch character list: %s\n", err)
 		return

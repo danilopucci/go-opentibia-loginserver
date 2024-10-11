@@ -22,3 +22,5 @@ database:
 
 rsakeyfile: key.pem
 
+ # options are: tvp, nostalrius, otx2
+queryversion: tvp
