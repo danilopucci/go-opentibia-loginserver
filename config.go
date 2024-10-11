@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"go-opentibia-loginserver/utils"
 	"log"
 	"strings"
 
@@ -66,6 +67,8 @@ func LoadConfig() (Config, error) {
 		return config, fmt.Errorf("unable to decode into struct: %w", err)
 	}
 
+	convertConfigWorldHostnameToIp(&config)
+
 	return config, nil
 }
 
@@ -84,4 +87,15 @@ func GetWorldById(config Config, worldId int) (World, error) {
 
 func GetDefaultWorld(config *Config) World {
 	return config.GameServer.Worlds[0]
+}
+
+func convertConfigWorldHostnameToIp(config *Config) {
+	for i := range config.GameServer.Worlds {
+		ipAddress, err := utils.IpToUint32(config.GameServer.Worlds[i].HostName)
+		if err == nil {
+			config.GameServer.Worlds[i].HostIP = ipAddress
+		} else {
+			fmt.Printf("could not convert world %s host %s to number ip address: %s\n", config.GameServer.Worlds[i].Name, config.GameServer.Worlds[i].HostName, err)
+		}
+	}
 }
