@@ -3,8 +3,10 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"go-opentibia-loginserver/config"
 	"go-opentibia-loginserver/crypt"
 	"go-opentibia-loginserver/packet"
+	"go-opentibia-loginserver/protocol"
 	"go-opentibia-loginserver/utils"
 	"net"
 	"os"
@@ -15,7 +17,7 @@ const PACKET_SIZE = 1024
 
 func main() {
 
-	config, err := LoadConfig()
+	config, err := config.LoadConfig()
 	if err != nil {
 		fmt.Printf("Error loading config: %v", err)
 	}
@@ -31,7 +33,7 @@ func main() {
 		fmt.Printf("error while creating database connection: %s\n", err)
 	}
 
-	loginParser := NewLoginParser(rsaDecrypter)
+	loginParser := protocol.NewLoginParser(rsaDecrypter)
 
 	tcpListener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", config.LoginServer.HostName, config.LoginServer.Port))
 	if err != nil {
@@ -52,7 +54,7 @@ func main() {
 
 }
 
-func handleTcpRequest(conn net.Conn, loginParser *LoginParser, database *sql.DB, config *Config) {
+func handleTcpRequest(conn net.Conn, loginParser *protocol.LoginParser, database *sql.DB, cfg *config.Config) {
 	defer conn.Close()
 
 	packet := packet.NewIncoming(PACKET_SIZE)
@@ -74,13 +76,13 @@ func handleTcpRequest(conn net.Conn, loginParser *LoginParser, database *sql.DB,
 	clientOpcode := packet.GetUint8()
 
 	if clientOpcode == Login {
-		handleLoginRequest(conn, loginParser, database, config, packet, remoteIpAddress)
+		handleLoginRequest(conn, loginParser, database, cfg, packet, remoteIpAddress)
 	} else {
 		fmt.Printf("received invalid ClientOpCode (%d) from IP %d\n", clientOpcode, remoteIpAddress)
 	}
 }
 
-func handleLoginRequest(conn net.Conn, loginParser *LoginParser, database *sql.DB, config *Config, packet *packet.Incoming, remoteIpAddress uint32) {
+func handleLoginRequest(conn net.Conn, loginParser *protocol.LoginParser, database *sql.DB, cfg *config.Config, packet *packet.Incoming, remoteIpAddress uint32) {
 	loginInfo, err := loginParser.ParseLogin(packet)
 	if err != nil {
 		fmt.Printf("[handleClient] - error parsing login info: %s\n", err)
@@ -93,38 +95,38 @@ func handleLoginRequest(conn net.Conn, loginParser *LoginParser, database *sql.D
 		return
 	}
 
-	if banInfo.isBanned {
-		banExpiresDateTime := utils.FormatDateTimeUTC(banInfo.expiresAt)
-		sendClientError(conn, loginInfo.xteaKey, fmt.Sprintf("Your IP has been banned until %s.\n\nReason specified:\n%s", banExpiresDateTime, banInfo.reason))
+	if banInfo.IsBanned {
+		banExpiresDateTime := utils.FormatDateTimeUTC(banInfo.ExpiresAt)
+		protocol.SendClientError(conn, loginInfo.XteaKey, fmt.Sprintf("Your IP has been banned until %s.\n\nReason specified:\n%s", banExpiresDateTime, banInfo.Reason))
 		return
 	}
 
-	if loginInfo.accountNumber == 0 {
-		sendClientError(conn, loginInfo.xteaKey, "Invalid account number.")
+	if loginInfo.AccountNumber == 0 {
+		protocol.SendClientError(conn, loginInfo.XteaKey, "Invalid account number.")
 		return
 	}
 
-	if loginInfo.password == "" {
-		sendClientError(conn, loginInfo.xteaKey, "Invalid password.")
+	if loginInfo.Password == "" {
+		protocol.SendClientError(conn, loginInfo.XteaKey, "Invalid password.")
 		return
 	}
 
-	accountInfo, err := getAccountInfo(database, loginInfo.accountNumber)
+	accountInfo, err := getAccountInfo(database, loginInfo.AccountNumber)
 	if err != nil {
 		fmt.Printf("[handleClient] - could not fetch account info: %s\n", err)
 		return
 	}
 
-	if utils.Sha1Hash(loginInfo.password) != accountInfo.passwordSHA1 {
-		sendClientError(conn, loginInfo.xteaKey, "Account number of password is not correct.")
+	if utils.Sha1Hash(loginInfo.Password) != accountInfo.PasswordSHA1 {
+		protocol.SendClientError(conn, loginInfo.XteaKey, "Account number of password is not correct.")
 		return
 	}
 
-	accountInfo.characters, err = getCharactersList(database, accountInfo.id)
+	accountInfo.Characters, err = getCharactersList(database, accountInfo.Id)
 	if err != nil {
 		fmt.Printf("[handleClient] - could not fetch character list: %s\n", err)
 		return
 	}
 
-	sendClientMotdAndCharacterList(conn, loginInfo.xteaKey, config.Motd, &accountInfo, config)
+	protocol.SendClientMotdAndCharacterList(conn, loginInfo.XteaKey, cfg.Motd, &accountInfo, cfg)
 }

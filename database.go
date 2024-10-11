@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"go-opentibia-loginserver/models"
 
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -44,43 +45,28 @@ func generateConnectionString(user string, password string, host string, port in
 	)
 }
 
-type BanInfo struct {
-	author    string
-	reason    string
-	expiresAt int64
-	isBanned  bool
-}
-
-func getIpBanInfo(database *sql.DB, ip uint32) (BanInfo, error) {
-	var banInfo BanInfo
+func getIpBanInfo(database *sql.DB, ip uint32) (models.BanInfo, error) {
+	var banInfo models.BanInfo
 	statement := fmt.Sprintf("SELECT `reason`, `expires_at`, `banned_by` FROM `ip_bans` WHERE `ip` = %d", ip)
 
-	err := database.QueryRow(statement).Scan(&banInfo.reason, &banInfo.expiresAt, &banInfo.author)
+	err := database.QueryRow(statement).Scan(&banInfo.Reason, &banInfo.ExpiresAt, &banInfo.Author)
 	if err != nil {
-		banInfo.isBanned = false
+		banInfo.IsBanned = false
 		if err != sql.ErrNoRows {
 			return banInfo, err
 		}
 		return banInfo, nil
 	}
 
-	banInfo.isBanned = true
+	banInfo.IsBanned = true
 	return banInfo, nil
 }
 
-type AccountInfo struct {
-	id            uint32
-	passwordSHA1  string
-	accountType   uint32
-	premiumEndsAt int64
-	characters    []string
-}
-
-func getAccountInfo(database *sql.DB, accountNumber uint32) (AccountInfo, error) {
-	var accountInfo AccountInfo
+func getAccountInfo(database *sql.DB, accountNumber uint32) (models.AccountInfo, error) {
+	var accountInfo models.AccountInfo
 	statement := fmt.Sprintf("SELECT `id`, `password`, `type`, `premium_ends_at` FROM `accounts` WHERE `id` = %d", accountNumber)
 
-	err := database.QueryRow(statement).Scan(&accountInfo.id, &accountInfo.passwordSHA1, &accountInfo.accountType, &accountInfo.premiumEndsAt)
+	err := database.QueryRow(statement).Scan(&accountInfo.Id, &accountInfo.PasswordSHA1, &accountInfo.AccountType, &accountInfo.PremiumEndsAt)
 	if err != nil && err != sql.ErrNoRows {
 		return accountInfo, err
 	}

@@ -1,20 +1,24 @@
-package main
+package protocol
 
 import (
 	"fmt"
+	"go-opentibia-loginserver/config"
+	"go-opentibia-loginserver/models"
 	"go-opentibia-loginserver/packet"
 	"net"
 )
 
-func sendClientError(conn net.Conn, xteaKey [4]uint32, errorData string) {
+const PACKET_SIZE = 1024
+
+func SendClientError(conn net.Conn, xteaKey [4]uint32, errorData string) {
 	packet := packet.NewOutgoing(PACKET_SIZE)
 	packet.AddUint8(0x0A)
 	packet.AddString(errorData)
 
-	sendData(conn, xteaKey, packet)
+	SendData(conn, xteaKey, packet)
 }
 
-func sendClientMotdAndCharacterList(conn net.Conn, xteaKey [4]uint32, motd string, accountInfo *AccountInfo, config *Config) {
+func SendClientMotdAndCharacterList(conn net.Conn, xteaKey [4]uint32, motd string, accountInfo *models.AccountInfo, cfg *config.Config) {
 	packet := packet.NewOutgoing(PACKET_SIZE)
 
 	// motd
@@ -25,24 +29,24 @@ func sendClientMotdAndCharacterList(conn net.Conn, xteaKey [4]uint32, motd strin
 
 	// character list
 	packet.AddUint8(0x64)
-	characterListLength := len(accountInfo.characters)
+	characterListLength := len(accountInfo.Characters)
 	packet.AddUint8(uint8(characterListLength))
 
 	//there is no support for multiworld yet, so get the default world
-	world := GetDefaultWorld(config)
+	world := config.GetDefaultWorld(cfg)
 
 	for i := 0; i < characterListLength; i++ {
-		packet.AddString(accountInfo.characters[i])
+		packet.AddString(accountInfo.Characters[i])
 		packet.AddString(world.Name)
 		packet.AddUint32(world.HostIP)
 		packet.AddUint16(world.Port)
 	}
 	packet.AddUint16(20)
 
-	sendData(conn, xteaKey, packet)
+	SendData(conn, xteaKey, packet)
 }
 
-func sendData(conn net.Conn, xteaKey [4]uint32, packet *packet.Outgoing) error {
+func SendData(conn net.Conn, xteaKey [4]uint32, packet *packet.Outgoing) error {
 	packet.XteaEncrypt(xteaKey)
 	packet.HeaderAddSize()
 

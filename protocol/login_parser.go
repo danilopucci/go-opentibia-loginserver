@@ -1,4 +1,4 @@
-package main
+package protocol
 
 import (
 	"fmt"
@@ -11,14 +11,14 @@ type LoginParser struct {
 }
 
 type LoginRequest struct {
-	clientOs        uint16
-	protocolVersion uint16
-	datSignature    uint32
-	sprSignature    uint32
-	picSignature    uint32
-	xteaKey         [4]uint32
-	accountNumber   uint32
-	password        string
+	ClientOs        uint16
+	ProtocolVersion uint16
+	DatSignature    uint32
+	SprSignature    uint32
+	PicSignature    uint32
+	XteaKey         [4]uint32
+	AccountNumber   uint32
+	Password        string
 }
 
 func NewLoginParser(decrypter crypt.Decrypter) *LoginParser {
@@ -28,11 +28,11 @@ func NewLoginParser(decrypter crypt.Decrypter) *LoginParser {
 func (loginParser *LoginParser) ParseLogin(packet *packet.Incoming) (LoginRequest, error) {
 	var request LoginRequest
 
-	request.clientOs = packet.GetUint16()
-	request.protocolVersion = packet.GetUint16()
-	request.datSignature = packet.GetUint32()
-	request.sprSignature = packet.GetUint32()
-	request.picSignature = packet.GetUint32()
+	request.ClientOs = packet.GetUint16()
+	request.ProtocolVersion = packet.GetUint16()
+	request.DatSignature = packet.GetUint32()
+	request.SprSignature = packet.GetUint32()
+	request.PicSignature = packet.GetUint32()
 
 	decryptedMsg, err := loginParser.decrypter.DecryptNoPadding(packet.PeekBuffer())
 	if err != nil {
@@ -45,13 +45,13 @@ func (loginParser *LoginParser) ParseLogin(packet *packet.Incoming) (LoginReques
 		return request, fmt.Errorf("[parseLogin] - error decrypted packet's first byte is not zero")
 	}
 
-	request.xteaKey[0] = packet.GetUint32()
-	request.xteaKey[1] = packet.GetUint32()
-	request.xteaKey[2] = packet.GetUint32()
-	request.xteaKey[3] = packet.GetUint32()
+	request.XteaKey[0] = packet.GetUint32()
+	request.XteaKey[1] = packet.GetUint32()
+	request.XteaKey[2] = packet.GetUint32()
+	request.XteaKey[3] = packet.GetUint32()
 
-	request.accountNumber = packet.GetUint32()
-	request.password = packet.GetString()
+	request.AccountNumber = packet.GetUint32()
+	request.Password = packet.GetString()
 
 	return request, nil
 }
