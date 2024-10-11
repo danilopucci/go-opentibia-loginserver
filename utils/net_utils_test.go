@@ -40,10 +40,10 @@ func TestGetRemoteIpAddr(t *testing.T) {
 		expectedIP uint32
 		expectErr  bool
 	}{
-		{"192.168.1.1:8080", 3232235777, false}, // 192.168.1.1
-		{"10.0.0.1:5000", 167772161, false},     // 10.0.0.1
-		{"invalid-ip:1234", 0, true},            // Invalid IP
-		{"[::1]:8080", 0, true},                 // IPv6 address
+		{"192.168.1.1:8080", 16885952, false}, // 192.168.1.1
+		{"10.0.0.1:5000", 16777226, false},    // 10.0.0.1
+		{"invalid-ip:1234", 0, true},          // Invalid IP
+		{"[::1]:8080", 0, true},               // IPv6 address
 	}
 
 	for _, test := range tests {
@@ -70,10 +70,10 @@ func TestIpToUint32(t *testing.T) {
 		expectedIP uint32
 		expectErr  bool
 	}{
-		{"192.168.1.1", 3232235777, false}, // 192.168.1.1
-		{"10.0.0.1", 167772161, false},     // 10.0.0.1
-		{"invalid-ip", 0, true},            // Invalid IP
-		{"::1", 0, true},                   // IPv6 address
+		{"192.168.1.1", 16885952, false}, // 192.168.1.1
+		{"10.0.0.1", 16777226, false},    // 10.0.0.1
+		{"invalid-ip", 0, true},          // Invalid IP
+		{"::1", 0, true},                 // IPv6 address
 	}
 
 	for _, test := range tests {
