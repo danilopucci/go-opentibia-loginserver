@@ -29,6 +29,12 @@ func main() {
 		os.Exit(1)
 	}
 
+	databaseQuery := database.GetDatabaseQuery(config.QueryVersion)
+	if databaseQuery == nil {
+		fmt.Printf("unsupported database query version: %s\n", config.QueryVersion)
+		return
+	}
+
 	db, err := database.CreateDatabaseConnection(config.Database.User, config.Database.Password, config.Database.HostName, config.Database.Port, config.Database.Name)
 	if err != nil {
 		fmt.Printf("error while creating database connection: %s\n", err)

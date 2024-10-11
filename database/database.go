@@ -16,11 +16,6 @@ type DatabaseQuery interface {
 	GetCharactersList(database *sql.DB, accountId uint32) ([]string, error)
 }
 
-// placeholders only
-type Otx2Query struct{}
-type NostalriusQuery struct{}
-type DefaultQuery struct{}
-
 func CreateDatabaseConnection(user string, password string, host string, port int, databaseName string) (*sql.DB, error) {
 	dsn := generateConnectionString(user, password, host, port, databaseName)
 
@@ -60,13 +55,6 @@ func GetDatabaseQuery(version string) DatabaseQuery {
 	switch version {
 	case "tvp":
 		return &TvpQuery{}
-		// case "otx2":
-		// 	return &Otx2Query{}
-		// case "nostalrius":
-		// 	return &NostalriusQuery{}
-
-		// default:
-		// 	return &DefaultQuery{}
 	}
 
 	return nil
