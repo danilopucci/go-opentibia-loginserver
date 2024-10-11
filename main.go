@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"go-opentibia-loginserver/config"
 	"go-opentibia-loginserver/crypt"
+	"go-opentibia-loginserver/database"
 	"go-opentibia-loginserver/packet"
 	"go-opentibia-loginserver/protocol"
 	"go-opentibia-loginserver/utils"
@@ -28,7 +29,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	database, err := CreateDatabaseConnection(config.Database.User, config.Database.Password, config.Database.HostName, config.Database.Port, config.Database.Name)
+	db, err := database.CreateDatabaseConnection(config.Database.User, config.Database.Password, config.Database.HostName, config.Database.Port, config.Database.Name)
 	if err != nil {
 		fmt.Printf("error while creating database connection: %s\n", err)
 	}
@@ -49,12 +50,12 @@ func main() {
 			continue
 		}
 
-		go handleTcpRequest(tcpConnection, loginParser, database, &config)
+		go handleTcpRequest(tcpConnection, loginParser, db, &config)
 	}
 
 }
 
-func handleTcpRequest(conn net.Conn, loginParser *protocol.LoginParser, database *sql.DB, cfg *config.Config) {
+func handleTcpRequest(conn net.Conn, loginParser *protocol.LoginParser, db *sql.DB, cfg *config.Config) {
 	defer conn.Close()
 
 	packet := packet.NewIncoming(PACKET_SIZE)
@@ -76,20 +77,20 @@ func handleTcpRequest(conn net.Conn, loginParser *protocol.LoginParser, database
 	clientOpcode := packet.GetUint8()
 
 	if clientOpcode == Login {
-		handleLoginRequest(conn, loginParser, database, cfg, packet, remoteIpAddress)
+		handleLoginRequest(conn, loginParser, db, cfg, packet, remoteIpAddress)
 	} else {
 		fmt.Printf("received invalid ClientOpCode (%d) from IP %d\n", clientOpcode, remoteIpAddress)
 	}
 }
 
-func handleLoginRequest(conn net.Conn, loginParser *protocol.LoginParser, database *sql.DB, cfg *config.Config, packet *packet.Incoming, remoteIpAddress uint32) {
+func handleLoginRequest(conn net.Conn, loginParser *protocol.LoginParser, db *sql.DB, cfg *config.Config, packet *packet.Incoming, remoteIpAddress uint32) {
 	loginInfo, err := loginParser.ParseLogin(packet)
 	if err != nil {
 		fmt.Printf("[handleClient] - error parsing login info: %s\n", err)
 		return
 	}
 
-	banInfo, err := getIpBanInfo(database, remoteIpAddress)
+	banInfo, err := database.GetIpBanInfo(db, remoteIpAddress)
 	if err != nil {
 		fmt.Printf("[handleClient] - could not fetch ban info: %s\n", err)
 		return
@@ -111,7 +112,7 @@ func handleLoginRequest(conn net.Conn, loginParser *protocol.LoginParser, databa
 		return
 	}
 
-	accountInfo, err := getAccountInfo(database, loginInfo.AccountNumber)
+	accountInfo, err := database.GetAccountInfo(db, loginInfo.AccountNumber)
 	if err != nil {
 		fmt.Printf("[handleClient] - could not fetch account info: %s\n", err)
 		return
@@ -122,7 +123,7 @@ func handleLoginRequest(conn net.Conn, loginParser *protocol.LoginParser, databa
 		return
 	}
 
-	accountInfo.Characters, err = getCharactersList(database, accountInfo.Id)
+	accountInfo.Characters, err = database.GetCharactersList(db, accountInfo.Id)
 	if err != nil {
 		fmt.Printf("[handleClient] - could not fetch character list: %s\n", err)
 		return

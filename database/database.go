@@ -1,4 +1,4 @@
-package main
+package database
 
 import (
 	"database/sql"
@@ -45,7 +45,7 @@ func generateConnectionString(user string, password string, host string, port in
 	)
 }
 
-func getIpBanInfo(database *sql.DB, ip uint32) (models.BanInfo, error) {
+func GetIpBanInfo(database *sql.DB, ip uint32) (models.BanInfo, error) {
 	var banInfo models.BanInfo
 	statement := fmt.Sprintf("SELECT `reason`, `expires_at`, `banned_by` FROM `ip_bans` WHERE `ip` = %d", ip)
 
@@ -62,7 +62,7 @@ func getIpBanInfo(database *sql.DB, ip uint32) (models.BanInfo, error) {
 	return banInfo, nil
 }
 
-func getAccountInfo(database *sql.DB, accountNumber uint32) (models.AccountInfo, error) {
+func GetAccountInfo(database *sql.DB, accountNumber uint32) (models.AccountInfo, error) {
 	var accountInfo models.AccountInfo
 	statement := fmt.Sprintf("SELECT `id`, `password`, `type`, `premium_ends_at` FROM `accounts` WHERE `id` = %d", accountNumber)
 
@@ -74,7 +74,7 @@ func getAccountInfo(database *sql.DB, accountNumber uint32) (models.AccountInfo,
 	return accountInfo, nil
 }
 
-func getCharactersList(database *sql.DB, accountId uint32) ([]string, error) {
+func GetCharactersList(database *sql.DB, accountId uint32) ([]string, error) {
 	var characterList []string
 
 	statement := fmt.Sprintf("SELECT `name` FROM `players` WHERE `account_id` = %d AND `deletion` = 0 ORDER BY `name` ASC", accountId)
