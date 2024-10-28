@@ -7,7 +7,8 @@ import (
 )
 
 const (
-	HEADER_OFFSET = 10
+	HEADER_OFFSET     = 10
+	MULTIPLE_OF_EIGHT = 8
 )
 
 type Outgoing struct {
@@ -17,14 +18,19 @@ type Outgoing struct {
 }
 
 func NewOutgoing(size int) *Outgoing {
+	// add MULTIPLE_OF_EIGHT as packets should be multiple of eight, so in worst case scenario it would need to add more eigth bytes
 	return &Outgoing{
-		buffer:   make([]byte, size),
+		buffer:   make([]byte, size+(HEADER_OFFSET+MULTIPLE_OF_EIGHT)),
 		position: 0,
 		header:   HEADER_OFFSET,
 	}
 }
 
-func (p *Outgoing) size() int {
+func (p *Outgoing) GetHeaderSize() int {
+	return (HEADER_OFFSET + MULTIPLE_OF_EIGHT)
+}
+
+func (p *Outgoing) Size() int {
 	return p.position + (HEADER_OFFSET - p.header)
 }
 
@@ -40,6 +46,16 @@ func (p *Outgoing) AddUint8(data uint8) {
 	}
 	p.buffer[offset] = data
 	p.position += 1
+}
+
+func (p *Outgoing) AddBytes(data []byte) {
+	offset := HEADER_OFFSET + p.position
+	if (offset + len(data)) > len(p.buffer) {
+		fmt.Println("Error: Buffer overflow")
+		return
+	}
+	copy(p.buffer[offset:], data)
+	p.position += len(data)
 }
 
 func (p *Outgoing) AddUint16(data uint16) {
@@ -81,13 +97,13 @@ func (p *Outgoing) AddString(data string) {
 }
 
 func (p *Outgoing) HeaderAddSize() {
-	size := uint16(p.size())
+	size := uint16(p.Size())
 	binary.LittleEndian.PutUint16(p.buffer[p.header-2:], size)
 	p.header -= 2
 }
 
 func (p *Outgoing) addPadding() {
-	size := p.size()
+	size := p.Size()
 	if size%8 != 0 {
 		toAdd := 8 - (size % 8)
 		for i := 0; i < toAdd; i++ {
@@ -102,7 +118,6 @@ func (p *Outgoing) XteaEncrypt(xteaKey [4]uint32) error {
 	p.addPadding()
 
 	expandedXteaKey := crypt.ExpandXteaKey(xteaKey)
-	crypt.XteaEncrypt(p.buffer[p.header:], expandedXteaKey)
-
+	crypt.XteaEncrypt(p.Get(), expandedXteaKey)
 	return nil
 }

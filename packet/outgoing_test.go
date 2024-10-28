@@ -8,7 +8,7 @@ import (
 func TestOutgoingInit(t *testing.T) {
 	packet := NewOutgoing(64)
 
-	if len(packet.buffer) != 64 {
+	if len(packet.buffer) != (64 + packet.GetHeaderSize()) {
 		t.Errorf("Expected buffer length of 64, got %d", len(packet.buffer))
 	}
 
@@ -18,6 +18,20 @@ func TestOutgoingInit(t *testing.T) {
 
 	if packet.header != HEADER_OFFSET {
 		t.Errorf("Expected header to be %d, got %d", HEADER_OFFSET, packet.header)
+	}
+}
+
+func TestAddBytes(t *testing.T) {
+	packet := NewOutgoing(15)
+	var bytes = []byte{0x01, 0x02, 0x03, 0x04, 0x05}
+	packet.AddBytes(bytes)
+
+	if packet.position != 5 {
+		t.Errorf("Expected position to be 1, got %d", packet.position)
+	}
+
+	if packet.buffer[HEADER_OFFSET] != 0x01 {
+		t.Errorf("Expected buffer to have 0x01, got %x", packet.buffer[HEADER_OFFSET])
 	}
 }
 
@@ -88,8 +102,8 @@ func TestAddPadding(t *testing.T) {
 	packet.addPadding()
 
 	expectedSize := 8 // Should round up to the nearest multiple of 8
-	if packet.size() != expectedSize {
-		t.Errorf("Expected size %d, got %d", expectedSize, packet.size())
+	if packet.Size() != expectedSize {
+		t.Errorf("Expected size %d, got %d", expectedSize, packet.Size())
 	}
 
 	for i := 1; i < expectedSize; i++ {
@@ -127,7 +141,7 @@ func TestOutgoingXteaEncrypt(t *testing.T) {
 
 	// Since actual encryption is not shown, test that the size and padding are handled
 	expectedSize := 8 // size should be padded to 8
-	if packet.size() != expectedSize {
-		t.Errorf("Expected size %d after encryption, got %d", expectedSize, packet.size())
+	if packet.Size() != expectedSize {
+		t.Errorf("Expected size %d after encryption, got %d", expectedSize, packet.Size())
 	}
 }
